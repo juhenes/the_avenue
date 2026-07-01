@@ -31,11 +31,62 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/events/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Event'),
-      ),
+      floatingActionButton: user.isGuest
+          ? null
+          : FloatingActionButton(
+              onPressed: () async {
+                final currentUser = ref.read(authStateProvider).value ?? AppUser.guest();
+                final normalizedEmail = currentUser.email.trim().toLowerCase();
+
+                final admins = await ref.read(adminsProvider.future);
+                if (!context.mounted) {
+                  return;
+                }
+
+                final canCreateAnnouncement = normalizedEmail == 'superadmin@theavenue.org' ||
+                    admins.any((admin) => admin.email == normalizedEmail);
+
+                if (!canCreateAnnouncement) {
+                  context.push('/events/new');
+                  return;
+                }
+
+                final choice = await showModalBottomSheet<String>(
+                  context: context,
+                  showDragHandle: true,
+                  builder: (sheetContext) {
+                    return SafeArea(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.event_outlined),
+                            title: const Text('Create event'),
+                            onTap: () => Navigator.of(sheetContext).pop('event'),
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.campaign_outlined),
+                            title: const Text('Create announcement'),
+                            onTap: () => Navigator.of(sheetContext).pop('announcement'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+
+                if (!context.mounted || choice == null) {
+                  return;
+                }
+
+                if (choice == 'announcement') {
+                  context.push('/announcements/new');
+                } else {
+                  context.push('/events/new');
+                }
+              },
+              child: const Icon(Icons.add),
+            ),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(eventsProvider);
@@ -53,43 +104,70 @@ class HomeScreen extends ConsumerWidget {
               ),
               onChanged: (value) => ref.read(searchQueryProvider.notifier).state = value,
             ),
-            const SizedBox(height: 20),
-            _QuickStats(eventsAsync: eventsAsync),
-            const SizedBox(height: 20),
-            _SectionHeader(title: 'Upcoming events', actionLabel: 'See all', onTap: () => context.push('/events')),
-            eventsAsync.when(
-              data: (events) => _UpcomingEventList(
-                events: events.where((event) {
-                  if (searchQuery.isEmpty) {
-                    return true;
-                  }
-                  return event.fullName.toLowerCase().contains(searchQuery.toLowerCase());
-                }).toList(),
+            _SectionHeader(
+                title: 'Announcements',
+                actionLabel: 'View all',
+                onTap: () => context.push('/announcements'),
               ),
-              loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
-              error: (error, stackTrace) => Text('Failed to load events: $error'),
-            ),
-            const SizedBox(height: 20),
-            _SectionHeader(title: 'Announcements', actionLabel: 'View all', onTap: () => context.push('/announcements')),
-            announcementsAsync.when(
-              data: (announcements) => Column(
-                children: announcements
-                    .map(
-                      (announcement) => Card(
-                        child: ListTile(
-                          leading: CircleAvatar(child: Icon(announcement.pinned ? Icons.push_pin : Icons.campaign)),
-                          title: Text(announcement.title),
-                          subtitle: Text(announcement.description, maxLines: 2, overflow: TextOverflow.ellipsis),
-                          trailing: const Icon(Icons.chevron_right),
-                          onTap: () => context.push('/announcements/${announcement.id}'),
+              announcementsAsync.when(
+                data: (announcements) => Column(
+                  children: announcements
+                      .map(
+                        (announcement) => Card(
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              child: Icon(
+                                announcement.pinned
+                                    ? Icons.push_pin
+                                    : Icons.campaign,
+                              ),
+                            ),
+                            title: Text(announcement.title),
+                            subtitle: Text(
+                              announcement.description,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () =>
+                                context.push('/announcements/${announcement.id}'),
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (error, stackTrace) =>
+                    Text('Failed to load announcements: $error'),
               ),
-              loading: () => const SizedBox.shrink(),
-              error: (error, stackTrace) => Text('Failed to load announcements: $error'),
-            ),
+              const SizedBox(height: 20),
+              _SectionHeader(
+                title: 'Upcoming events',
+                actionLabel: 'See all',
+                onTap: () => context.push('/events'),
+              ),
+              eventsAsync.when(
+                data: (events) {
+                  final visibleEvents = events.where((event) {
+                    if (searchQuery.isEmpty) {
+                      return true;
+                    }
+                    return event.fullName
+                        .toLowerCase()
+                        .contains(searchQuery.toLowerCase());
+                  }).toList();
+
+                  return _UpcomingEventList(events: visibleEvents);
+                },
+                loading: () => const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+                error: (error, stackTrace) =>
+                    Text('Failed to load events: $error'),
+              ),
           ],
         ),
       ),
@@ -133,69 +211,6 @@ class _HeroBanner extends StatelessWidget {
   }
 }
 
-class _QuickStats extends StatelessWidget {
-  const _QuickStats({required this.eventsAsync});
-
-  final AsyncValue<List<EventRecord>> eventsAsync;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return eventsAsync.when(
-      data: (events) {
-        final birthDateEvents = events.where((event) => event.eventType == EventType.birthday).length;
-        final otherEvents = events.length - birthDateEvents;
-        final upcoming = events.where((event) => event.celebrationDate.isAfter(DateTime.now())).length;
-
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _StatCard(label: 'Upcoming', value: '$upcoming', icon: Icons.event_available_outlined),
-            _StatCard(label: 'Birth date events', value: '$birthDateEvents', icon: Icons.cake_outlined),
-            _StatCard(label: 'Other events', value: '$otherEvents', icon: Icons.celebration_outlined),
-          ],
-        );
-      },
-      loading: () => const Padding(
-        padding: EdgeInsets.all(12),
-        child: LinearProgressIndicator(),
-      ),
-      error: (error, stackTrace) => Text('Unable to load stats: $error', style: theme.textTheme.bodyMedium),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value, required this.icon});
-
-  final String label;
-  final String value;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 140,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon),
-              const SizedBox(height: 18),
-              Text(value, style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Text(label),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.title, required this.actionLabel, required this.onTap});
 
@@ -221,32 +236,87 @@ class _UpcomingEventList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (events.isEmpty) {
+    final upcomingEvents = events
+        .map(
+          (event) => MapEntry(event, nextOccurrenceForEvent(event)),
+        )
+        .where((entry) => entry.value != null)
+        .toList()
+      ..sort((left, right) => left.value!.compareTo(right.value!));
+
+    if (upcomingEvents.isEmpty) {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(20),
-          child: Text('No events found yet.'),
+          child: Text('No upcoming events yet.'),
         ),
       );
     }
 
     return Column(
-      children: events
+      children: upcomingEvents
           .take(3)
           .map(
-            (event) => Card(
+            (entry) {
+              final event = entry.key;
+              final nextOccurrence = entry.value!;
+
+              return Card(
               child: ListTile(
                 leading: CircleAvatar(child: Text(event.fullName.characters.first.toUpperCase())),
                 title: Text(event.fullName),
-                subtitle: Text(DateFormat.yMMMMd().format(event.celebrationDate)),
+                subtitle: Text(DateFormat.yMMMMd().format(nextOccurrence)),
                 trailing: _PrivacyChip(privacy: event.privacy),
                 onTap: () => context.push('/events/${event.id}'),
               ),
-            ),
+            );
+            },
           )
           .toList(),
     );
   }
+}
+
+DateTime? nextOccurrenceForEvent(EventRecord event, {DateTime? now}) {
+  final reference = DateTime(now?.year ?? DateTime.now().year, now?.month ?? DateTime.now().month, now?.day ?? DateTime.now().day);
+  final initial = DateTime(event.celebrationDate.year, event.celebrationDate.month, event.celebrationDate.day);
+
+  switch (event.recurrence) {
+    case EventRecurrence.never:
+      return initial.isBefore(reference) ? null : initial;
+    case EventRecurrence.daily:
+      var next = initial;
+      while (next.isBefore(reference)) {
+        next = next.add(const Duration(days: 1));
+      }
+      return next;
+    case EventRecurrence.weekly:
+      var next = initial;
+      while (next.isBefore(reference)) {
+        next = next.add(const Duration(days: 7));
+      }
+      return next;
+    case EventRecurrence.monthly:
+      var next = initial;
+      while (next.isBefore(reference)) {
+        next = _addMonthsClamped(next, 1);
+      }
+      return next;
+    case EventRecurrence.yearly:
+      var next = initial;
+      while (next.isBefore(reference)) {
+        next = _addMonthsClamped(next, 12);
+      }
+      return next;
+  }
+}
+
+DateTime _addMonthsClamped(DateTime date, int monthsToAdd) {
+  final targetYear = date.year + ((date.month - 1 + monthsToAdd) ~/ 12);
+  final targetMonth = ((date.month - 1 + monthsToAdd) % 12) + 1;
+  final targetDay = date.day.clamp(1, DateTime(targetYear, targetMonth + 1, 0).day);
+
+  return DateTime(targetYear, targetMonth, targetDay);
 }
 
 class _PrivacyChip extends StatelessWidget {

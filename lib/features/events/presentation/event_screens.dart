@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,11 +32,10 @@ class EventListScreen extends ConsumerWidget {
         data: (events) {
           final visibleEvents = events.where((event) {
             if (query.isEmpty) {
-              final matchesPrivacy = privacyFilter == null || event.privacy == privacyFilter;
-              return matchesPrivacy;
+              return privacyFilter == null || event.privacy == privacyFilter;
             }
-            final matchesQuery = event.fullName.toLowerCase().contains(query.toLowerCase()) ||
-                event.relationship?.toLowerCase().contains(query.toLowerCase()) == true;
+
+            final matchesQuery = event.fullName.toLowerCase().contains(query.toLowerCase());
             final matchesPrivacy = privacyFilter == null || event.privacy == privacyFilter;
             return matchesQuery && matchesPrivacy;
           }).toList()
@@ -77,7 +77,7 @@ class EventListScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<_EventSort>(
-                value: sortBy,
+                initialValue: sortBy,
                 decoration: const InputDecoration(labelText: 'Sort by'),
                 items: const [
                   DropdownMenuItem(value: _EventSort.celebrationDate, child: Text('Celebration date')),
@@ -120,43 +120,90 @@ class EventFormScreen extends ConsumerStatefulWidget {
 class _EventFormScreenState extends ConsumerState<EventFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _fullNameController = TextEditingController();
-  final _relationshipController = TextEditingController();
   final _notesController = TextEditingController();
-  final List<int> _selectedOffsets = [7, 3, 1];
+
   DateTime _celebrationDate = DateTime.now().add(const Duration(days: 7));
-  DateTime? _birthDate;
   EventType _eventType = EventType.birthday;
+  EventRecurrence _recurrence = EventRecurrence.yearly;
   EventPrivacy _privacy = EventPrivacy.private;
-  ReminderPattern _pattern = ReminderPattern.once;
+  int _reminderDays = 7;
   bool _reminderEnabled = true;
   bool _saving = false;
+  bool _loadedExistingEvent = false;
 
   @override
   void dispose() {
     _fullNameController.dispose();
-    _relationshipController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate({required bool isBirthDate}) async {
-    final initial = isBirthDate ? (_birthDate ?? DateTime.now()) : _celebrationDate;
+  bool _canManageEvent({
+    required AppUser currentUser,
+    required bool isAdmin,
+    required EventRecord event,
+  }) {
+    final normalizedEmail = currentUser.email.trim().toLowerCase();
+    return event.ownerId == currentUser.id ||
+        normalizedEmail == 'superadmin@theavenue.org' ||
+        isAdmin;
+  }
+
+  void _hydrateFromEvent(EventRecord event) {
+    if (_loadedExistingEvent) {
+      return;
+    }
+
+    _loadedExistingEvent = true;
+    _fullNameController.text = event.fullName;
+    _notesController.text = event.notes ?? '';
+    _celebrationDate = event.celebrationDate;
+    _eventType = event.eventType;
+    _recurrence = event.recurrence;
+    _privacy = event.privacy;
+    _reminderEnabled = event.reminderEnabled;
+    _reminderDays = _reminderDaysFromOffsets(event.reminderOffsets);
+  }
+
+  Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
-      initialDate: initial,
+      initialDate: _celebrationDate,
     );
-    if (picked == null) {
-      return;
-    }
+
+    if (picked == null) return;
+
     setState(() {
-      if (isBirthDate) {
-        _birthDate = picked;
-      } else {
-        _celebrationDate = picked;
-      }
+      _celebrationDate = picked;
     });
+  }
+
+  int _reminderDaysFromOffsets(List<int> offsets) {
+    if (offsets.isEmpty) {
+      return 7;
+    }
+
+    for (final preset in [1, 3, 7]) {
+      final generatedOffsets = List<int>.generate(preset, (index) => preset - index);
+      if (listEquals(offsets, generatedOffsets)) {
+        return preset;
+      }
+    }
+
+    final highestOffset = offsets.first;
+    if (highestOffset >= 7) {
+      return 7;
+    }
+    if (highestOffset >= 3) {
+      return 3;
+    }
+    return 1;
+  }
+
+  List<int> _buildReminderOffsets(int days) {
+    return List<int>.generate(days, (index) => days - index);
   }
 
   Future<void> _save() async {
@@ -172,122 +219,352 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
       return;
     }
 
+    final isAdmin = ref.read(currentUserIsAdminProvider).value ?? false;
+
+    EventRecord? existingEvent;
+    if (widget.eventId != null) {
+      final events = ref.read(eventsProvider).value ?? const <EventRecord>[];
+      existingEvent = events.firstWhere(
+        (candidate) => candidate.id == widget.eventId,
+        orElse: () => EventRecord(
+          id: widget.eventId!,
+          ownerId: user.id,
+          fullName: '',
+          eventType: EventType.birthday,
+          celebrationDate: DateTime.now(),
+          recurrence: EventRecurrence.yearly,
+          privacy: EventPrivacy.private,
+          createdBy: user.id,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+
+      if (!_canManageEvent(currentUser: user, isAdmin: isAdmin, event: existingEvent)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Only the creator, admin, or superadmin can edit this event.')),
+        );
+        return;
+      }
+    }
+
     setState(() => _saving = true);
     final event = EventRecord(
       id: widget.eventId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      ownerId: user.id,
+      ownerId: existingEvent?.ownerId ?? user.id,
       fullName: _fullNameController.text.trim(),
       eventType: _eventType,
-      birthDate: _birthDate,
       celebrationDate: _celebrationDate,
-      relationship: _relationshipController.text.trim().isEmpty ? null : _relationshipController.text.trim(),
+      recurrence: _recurrence,
       notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
       reminderEnabled: _reminderEnabled,
-      reminderOffsets: _selectedOffsets,
-      reminderPattern: _pattern,
+      reminderOffsets: _buildReminderOffsets(_reminderDays),
       privacy: _privacy,
-      createdBy: user.id,
-      createdAt: DateTime.now(),
+      createdBy: existingEvent?.createdBy ?? user.id,
+      createdAt: existingEvent?.createdAt ?? DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
-    await ref.read(eventRepositoryProvider).saveEvent(event);
-    await ref.read(notificationServiceProvider).updateReminders(event);
-    ref.invalidate(eventsProvider);
+    try {
+      await ref.read(eventRepositoryProvider).saveEvent(event);
 
-    if (mounted) {
-      context.pop();
-    }
-    if (mounted) {
-      setState(() => _saving = false);
+      try {
+        await ref.read(notificationServiceProvider).updateReminders(event);
+      } catch (error) {
+        debugPrint('Failed to update reminders for ${event.id}: $error');
+      }
+
+      ref.invalidate(eventsProvider);
+
+      if (mounted) {
+        context.pop();
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to save event: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isEditing = widget.eventId != null;
+    final currentUser = ref.watch(authStateProvider).value ?? AppUser.guest();
+    final isAdminAsync = ref.watch(currentUserIsAdminProvider);
+    final eventsAsync = ref.watch(eventsProvider);
+
+    if (!isEditing) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('New event')),
+        body: _EventFormBody(
+          formKey: _formKey,
+          fullNameController: _fullNameController,
+          notesController: _notesController,
+          saving: _saving,
+          celebrationDate: _celebrationDate,
+          eventType: _eventType,
+          recurrence: _recurrence,
+          privacy: _privacy,
+          reminderDays: _reminderDays,
+          reminderEnabled: _reminderEnabled,
+          onReminderDaysChanged: (value) => setState(() => _reminderDays = value),
+          onPickDate: _pickDate,
+          onEventTypeChanged: (value) {
+            setState(() {
+              _eventType = value;
+
+              switch (value) {
+                case EventType.birthday:
+                case EventType.anniversary:
+                case EventType.wedding:
+                  _recurrence = EventRecurrence.yearly;
+                  break;
+                case EventType.graduation:
+                  _recurrence = EventRecurrence.never;
+                  break;
+                case EventType.custom:
+                  break;
+              }
+            });
+          },
+          onPrivacyChanged: (value) => setState(() => _privacy = value ?? EventPrivacy.private),
+          onRecurrenceChanged: (value) {
+            if (value != null) {
+              setState(() => _recurrence = value);
+            }
+          },
+          onReminderEnabledChanged: (value) => setState(() => _reminderEnabled = value),
+          onSave: _save,
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(title: Text(isEditing ? 'Edit event' : 'New event')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _fullNameController,
-                  decoration: const InputDecoration(labelText: 'Full name'),
-                  validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<EventType>(
-                  value: _eventType,
-                  decoration: const InputDecoration(labelText: 'Event type'),
-                  items: EventType.values
-                      .map((value) => DropdownMenuItem(value: value, child: Text(_eventTypeLabel(value))))
-                      .toList(),
-                  onChanged: (value) => setState(() => _eventType = value ?? EventType.birthday),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _relationshipController,
-                  decoration: const InputDecoration(labelText: 'Relationship / Category'),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _notesController,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 16),
-                SwitchListTile.adaptive(
-                  value: _reminderEnabled,
-                  onChanged: (value) => setState(() => _reminderEnabled = value),
-                  title: const Text('Reminder enabled'),
-                ),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    ChoiceChip(label: const Text('Once'), selected: _pattern == ReminderPattern.once, onSelected: (_) => setState(() => _pattern = ReminderPattern.once)),
-                    ChoiceChip(label: const Text('Daily'), selected: _pattern == ReminderPattern.dailyUntilEvent, onSelected: (_) => setState(() => _pattern = ReminderPattern.dailyUntilEvent)),
-                    ChoiceChip(label: const Text('Every other day'), selected: _pattern == ReminderPattern.everyOtherDay, onSelected: (_) => setState(() => _pattern = ReminderPattern.everyOtherDay)),
-                    ChoiceChip(label: const Text('Weekly'), selected: _pattern == ReminderPattern.weeklyUntilEvent, onSelected: (_) => setState(() => _pattern = ReminderPattern.weeklyUntilEvent)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<EventPrivacy>(
-                  value: _privacy,
-                  decoration: const InputDecoration(labelText: 'Privacy'),
-                  items: EventPrivacy.values
-                      .map((value) => DropdownMenuItem(value: value, child: Text(value.name.toUpperCase())))
-                      .toList(),
-                  onChanged: (value) => setState(() => _privacy = value ?? EventPrivacy.private),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Celebration date'),
-                  subtitle: Text(DateFormat.yMMMMd().format(_celebrationDate)),
-                  trailing: TextButton(onPressed: () => _pickDate(isBirthDate: false), child: const Text('Pick date')),
-                ),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Birth date (optional)'),
-                  subtitle: Text(_birthDate == null ? 'Not set' : DateFormat.yMMMMd().format(_birthDate!)),
-                  trailing: TextButton(onPressed: () => _pickDate(isBirthDate: true), child: const Text('Pick date')),
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: Text(_saving ? 'Saving...' : 'Save event'),
-                ),
-              ],
-            ),
-          ),
-        ],
+      appBar: AppBar(title: const Text('Edit event')),
+      body: eventsAsync.when(
+        data: (events) {
+          final event = events.firstWhere(
+            (candidate) => candidate.id == widget.eventId,
+            orElse: () => events.first,
+          );
+
+          return isAdminAsync.when(
+            data: (isAdmin) {
+              final canManageEvent = _canManageEvent(currentUser: currentUser, isAdmin: isAdmin, event: event);
+
+              if (!canManageEvent) {
+                return const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('Only the creator, admin, or superadmin can edit this event.'),
+                  ),
+                );
+              }
+
+              if (!_loadedExistingEvent) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _hydrateFromEvent(event);
+                    setState(() {});
+                  }
+                });
+              }
+
+              return _EventFormBody(
+                formKey: _formKey,
+                fullNameController: _fullNameController,
+                notesController: _notesController,
+                saving: _saving,
+                celebrationDate: _celebrationDate,
+                eventType: _eventType,
+                recurrence: _recurrence,
+                privacy: _privacy,
+                reminderDays: _reminderDays,
+                reminderEnabled: _reminderEnabled,
+                onReminderDaysChanged: (value) => setState(() => _reminderDays = value),
+                onPickDate: _pickDate,
+                onEventTypeChanged: (value) {
+                  setState(() {
+                    _eventType = value;
+
+                    switch (value) {
+                      case EventType.birthday:
+                      case EventType.anniversary:
+                      case EventType.wedding:
+                        _recurrence = EventRecurrence.yearly;
+                        break;
+                      case EventType.graduation:
+                        _recurrence = EventRecurrence.never;
+                        break;
+                      case EventType.custom:
+                        break;
+                    }
+                  });
+                },
+                onPrivacyChanged: (value) => setState(() => _privacy = value ?? EventPrivacy.private),
+                onRecurrenceChanged: (value) {
+                  if (value != null) {
+                    setState(() => _recurrence = value);
+                  }
+                },
+                onReminderEnabledChanged: (value) => setState(() => _reminderEnabled = value),
+                onSave: _save,
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => Center(child: Text('Unable to load permissions: $error')),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(child: Text('Unable to load event: $error')),
       ),
+    );
+  }
+}
+
+class _EventFormBody extends StatelessWidget {
+  const _EventFormBody({
+    required this.formKey,
+    required this.fullNameController,
+    required this.notesController,
+    required this.saving,
+    required this.celebrationDate,
+    required this.eventType,
+    required this.recurrence,
+    required this.privacy,
+    required this.reminderDays,
+    required this.reminderEnabled,
+    required this.onPickDate,
+    required this.onEventTypeChanged,
+    required this.onPrivacyChanged,
+    required this.onRecurrenceChanged,
+    required this.onReminderEnabledChanged,
+    required this.onReminderDaysChanged,
+    required this.onSave,
+  });
+
+  final GlobalKey<FormState> formKey;
+  final TextEditingController fullNameController;
+  final TextEditingController notesController;
+  final bool saving;
+  final DateTime celebrationDate;
+  final EventType eventType;
+  final EventRecurrence recurrence;
+  final EventPrivacy privacy;
+  final int reminderDays;
+  final bool reminderEnabled;
+  final VoidCallback onPickDate;
+  final ValueChanged<EventType> onEventTypeChanged;
+  final ValueChanged<EventPrivacy?> onPrivacyChanged;
+  final ValueChanged<EventRecurrence?> onRecurrenceChanged;
+  final ValueChanged<bool> onReminderEnabledChanged;
+  final ValueChanged<int> onReminderDaysChanged;
+  final Future<void> Function() onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Form(
+          key: formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: fullNameController,
+                decoration: const InputDecoration(labelText: 'Full name'),
+                validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<EventType>(
+                initialValue: eventType,
+                decoration: const InputDecoration(labelText: 'Event type'),
+                items: EventType.values
+                    .map((value) => DropdownMenuItem(value: value, child: Text(_eventTypeLabel(value))))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    onEventTypeChanged(value);
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: notesController,
+                decoration: const InputDecoration(labelText: 'Notes'),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+              SwitchListTile.adaptive(
+                value: reminderEnabled,
+                onChanged: onReminderEnabledChanged,
+                title: const Text('Reminder enabled'),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<int>(
+                initialValue: reminderDays,
+                decoration: const InputDecoration(labelText: 'Reminder days before event'),
+                items: const [1, 3, 7]
+                    .map(
+                      (value) => DropdownMenuItem(
+                        value: value,
+                        child: Text(value == 1 ? '1 day' : '$value days'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    onReminderDaysChanged(value);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Selecting $reminderDays day${reminderDays == 1 ? '' : 's'} creates reminders at ${List<int>.generate(reminderDays, (index) => reminderDays - index).join(', ')} day${reminderDays == 1 ? '' : 's'} before the event.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<EventPrivacy>(
+                initialValue: privacy,
+                decoration: const InputDecoration(labelText: 'Privacy'),
+                items: EventPrivacy.values
+                    .map((value) => DropdownMenuItem(value: value, child: Text(value.name.toUpperCase())))
+                    .toList(),
+                onChanged: onPrivacyChanged,
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<EventRecurrence>(
+                initialValue: recurrence,
+                decoration: const InputDecoration(labelText: 'Repeat'),
+                items: EventRecurrence.values
+                    .map((value) => DropdownMenuItem(value: value, child: Text(value.name.toUpperCase())))
+                    .toList(),
+                onChanged: onRecurrenceChanged,
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Celebration date'),
+                subtitle: Text(DateFormat.yMMMMd().format(celebrationDate)),
+                trailing: TextButton(
+                  onPressed: onPickDate,
+                  child: const Text('Pick date'),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: saving ? null : onSave,
+                child: Text(saving ? 'Saving...' : 'Save event'),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -299,18 +576,12 @@ class EventDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final currentUser = ref.watch(authStateProvider).value ?? AppUser.guest();
+    final isAdminAsync = ref.watch(currentUserIsAdminProvider);
     final eventsAsync = ref.watch(eventsProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Event details'),
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/events/$eventId/edit'),
-            icon: const Icon(Icons.edit_outlined),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Event details')),
       body: eventsAsync.when(
         data: (events) {
           final event = events.firstWhere(
@@ -318,45 +589,68 @@ class EventDetailScreen extends ConsumerWidget {
             orElse: () => events.first,
           );
 
-          return ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(event.fullName, style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 8),
-                      Text(event.eventType.name.toUpperCase()),
-                      const SizedBox(height: 16),
-                      _KeyValue(label: 'Privacy', value: event.privacy.name.toUpperCase()),
-                      _KeyValue(label: 'Celebration date', value: DateFormat.yMMMMd().format(event.celebrationDate)),
-                      _KeyValue(label: 'Reminder', value: event.reminderEnabled ? 'Enabled' : 'Disabled'),
-                      _KeyValue(label: 'Pattern', value: event.reminderPattern.name),
-                      if (event.relationship != null) _KeyValue(label: 'Relationship', value: event.relationship!),
-                      if (event.notes != null) _KeyValue(label: 'Notes', value: event.notes!),
-                      const SizedBox(height: 16),
-                      Row(
+          return isAdminAsync.when(
+            data: (isAdmin) {
+              final canManageEvent = event.ownerId == currentUser.id ||
+                  currentUser.email.trim().toLowerCase() == 'superadmin@theavenue.org' ||
+                  isAdmin;
+
+              return ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          FilledButton(
-                            onPressed: () async {
-                              await ref.read(eventRepositoryProvider).deleteEvent(event.id);
-                              ref.invalidate(eventsProvider);
-                              if (context.mounted) {
-                                context.pop();
-                              }
-                            },
-                            child: const Text('Delete'),
+                          Text(event.fullName, style: Theme.of(context).textTheme.headlineMedium),
+                          const SizedBox(height: 8),
+                          Text(event.eventType.name.toUpperCase()),
+                          const SizedBox(height: 16),
+                          _KeyValue(label: 'Privacy', value: event.privacy.name.toUpperCase()),
+                          _KeyValue(label: 'Celebration date', value: DateFormat.yMMMMd().format(event.celebrationDate)),
+                          _KeyValue(label: 'Reminder', value: event.reminderEnabled ? 'Enabled' : 'Disabled'),
+                          _KeyValue(label: 'Repeat', value: event.recurrence.name.toUpperCase()),
+                          _KeyValue(label: 'Reminder days', value: event.reminderOffsets.map((e) => '$e day(s)').join(', ')),
+                          if (event.notes != null) _KeyValue(label: 'Notes', value: event.notes!),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              if (canManageEvent)
+                                FilledButton(
+                                  onPressed: () async {
+                                    await ref.read(eventRepositoryProvider).deleteEvent(event.id);
+                                    ref.invalidate(eventsProvider);
+                                    if (context.mounted) {
+                                      context.pop();
+                                    }
+                                  },
+                                  child: const Text('Delete'),
+                                ),
+                              if (canManageEvent) ...[
+                                const SizedBox(width: 12),
+                                OutlinedButton(
+                                  onPressed: () => context.push('/events/$eventId/edit'),
+                                  child: const Text('Edit'),
+                                ),
+                              ],
+                            ],
                           ),
+                          if (!canManageEvent)
+                            const Padding(
+                              padding: EdgeInsets.only(top: 12),
+                              child: Text('Only the creator, admin, or superadmin can edit or delete this event.'),
+                            ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (error, stackTrace) => Center(child: Text('Unable to load permissions: $error')),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -477,8 +771,16 @@ class _KeyValue extends StatelessWidget {
 }
 
 String _eventTypeLabel(EventType eventType) {
-  if (eventType == EventType.birthday) {
-    return 'Birth date';
+  switch (eventType) {
+    case EventType.birthday:
+      return 'Birthday';
+    case EventType.anniversary:
+      return 'Anniversary';
+    case EventType.graduation:
+      return 'Graduation';
+    case EventType.wedding:
+      return 'Wedding';
+    case EventType.custom:
+      return 'Custom';
   }
-  return eventType.name.toUpperCase();
 }

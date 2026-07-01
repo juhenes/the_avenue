@@ -14,10 +14,17 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    await FirebaseBootstrap.initialize();
     firebaseReady = true;
   } catch (_) {
     firebaseReady = false;
+  }
+
+  if (firebaseReady) {
+    try {
+      await FirebaseBootstrap.initialize();
+    } catch (error) {
+      debugPrint('Firebase bootstrap skipped: $error');
+    }
   }
 
   runApp(

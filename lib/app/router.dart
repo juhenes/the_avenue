@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 
-import '../core/models/app_user.dart';
 import '../features/announcements/presentation/announcements_screen.dart';
 import '../features/authentication/presentation/auth_screens.dart';
 import '../features/events/presentation/event_screens.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/settings/presentation/admin_management_screen.dart';
 import 'providers.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -91,6 +91,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const AnnouncementsScreen(),
       ),
       GoRoute(
+        path: '/announcements/new',
+        builder: (context, state) => const AnnouncementFormScreen(),
+      ),
+      GoRoute(
         path: '/announcements/:announcementId',
         builder: (context, state) => AnnouncementDetailScreen(announcementId: state.pathParameters['announcementId']!),
       ),
@@ -101,6 +105,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/admins',
+        builder: (context, state) => const AdminManagementScreen(),
       ),
     ],
   );

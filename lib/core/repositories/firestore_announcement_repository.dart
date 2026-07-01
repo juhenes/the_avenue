@@ -45,4 +45,9 @@ class FirestoreAnnouncementRepository implements AnnouncementRepository {
       return announcements;
     });
   }
+
+  @override
+  Future<void> saveAnnouncement(Announcement announcement) async {
+    await _announcements.doc(announcement.id).set(announcement.toJson());
+  }
 }

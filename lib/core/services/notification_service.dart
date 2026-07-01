@@ -14,12 +14,18 @@ class NotificationService {
   bool _initialized = false;
 
   Future<void> initialize() async {
+    // Local notifications are not supported on Flutter Web.
+    if (kIsWeb) return;
+
     if (_initialized) {
       return;
     }
 
     tz_data.initializeTimeZones();
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
     const initializationSettings = InitializationSettings(
       android: androidSettings,
       iOS: DarwinInitializationSettings(),
@@ -27,6 +33,7 @@ class NotificationService {
     );
 
     await _plugin.initialize(initializationSettings);
+
     _initialized = true;
   }
 
@@ -35,17 +42,18 @@ class NotificationService {
     required DateTime scheduledFor,
     required int reminderOffsetDays,
   }) async {
+    if (kIsWeb) return;
+
     await initialize();
-    if (kIsWeb) {
-      return;
-    }
 
     final notificationDateTime = scheduledFor.toLocal();
+
     final notificationDetails = NotificationDetails(
       android: AndroidNotificationDetails(
         'event_reminders',
         'Event Reminders',
-        channelDescription: 'Local reminders for events and celebration dates',
+        channelDescription:
+            'Local reminders for events and celebration dates',
         importance: Importance.high,
         priority: Priority.high,
       ),
@@ -56,19 +64,25 @@ class NotificationService {
     await _plugin.zonedSchedule(
       NotificationIds.reminder(event.id, reminderOffsetDays),
       '${event.fullName} is coming up',
-      'Reminder ${reminderOffsetDays} day(s) before the ${event.eventType.name}.',
-      NotificationService._toZonedDateTime(notificationDateTime),
+      'Reminder $reminderOffsetDays day(s) before the ${event.eventType.name}.',
+      _toZonedDateTime(notificationDateTime),
       notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dateAndTime,
     );
   }
 
   Future<void> updateReminders(EventRecord event) async {
+    if (kIsWeb) return;
+
     await cancelReminders(event.id);
+
     for (final reminderOffset in ReminderSchedule.offsetsForEvent(event)) {
-      final scheduledFor = event.celebrationDate.subtract(Duration(days: reminderOffset));
+      final scheduledFor =
+          event.celebrationDate.subtract(Duration(days: reminderOffset));
+
       if (scheduledFor.isAfter(DateTime.now())) {
         await scheduleReminder(
           event: event,
@@ -80,18 +94,26 @@ class NotificationService {
   }
 
   Future<void> cancelReminders(String eventId) async {
+    if (kIsWeb) return;
+
     await initialize();
+
     for (var offset = 0; offset <= 365; offset++) {
-      await _plugin.cancel(NotificationIds.reminder(eventId, offset));
+      await _plugin.cancel(
+        NotificationIds.reminder(eventId, offset),
+      );
     }
   }
 
   Future<void> rescheduleAfterEdit(EventRecord event) async {
+    if (kIsWeb) return;
+
     await updateReminders(event);
   }
 
   static tz.TZDateTime _toZonedDateTime(DateTime dateTime) {
     final local = dateTime.toLocal();
+
     return tz.TZDateTime.local(
       local.year,
       local.month,

@@ -8,36 +8,27 @@ class ReminderSchedule {
       return const [];
     }
 
-    final offsets = <int>{...event.reminderOffsets.where((value) => value >= 0)};
-    offsets.addAll(_patternOffsets(event.reminderPattern, event.celebrationDate));
+    final offsets = event.reminderOffsets
+        .where((offset) => offset >= 0)
+        .toSet()
+        .toList()
+      ..sort((a, b) => b.compareTo(a));
 
-    final sortedOffsets = offsets.toList()..sort((left, right) => right.compareTo(left));
-    return sortedOffsets;
+    return offsets;
   }
 
-  static List<DateTime> scheduleDatesForEvent(EventRecord event, DateTime now) {
+  static List<DateTime> scheduleDatesForEvent(
+    EventRecord event,
+    DateTime now,
+  ) {
     return offsetsForEvent(event)
-        .map((offset) => event.celebrationDate.subtract(Duration(days: offset)))
-        .where((dateTime) => dateTime.isAfter(now))
+        .map(
+          (offset) => event.celebrationDate.subtract(
+            Duration(days: offset),
+          ),
+        )
+        .where((date) => !date.isBefore(now))
         .toList()
       ..sort();
-  }
-
-  static Iterable<int> _patternOffsets(ReminderPattern pattern, DateTime celebrationDate) {
-    final daysUntilEvent = celebrationDate.difference(DateTime.now()).inDays;
-    if (daysUntilEvent <= 0) {
-      return const [];
-    }
-
-    switch (pattern) {
-      case ReminderPattern.once:
-        return const [];
-      case ReminderPattern.dailyUntilEvent:
-        return List<int>.generate(daysUntilEvent, (index) => daysUntilEvent - index);
-      case ReminderPattern.everyOtherDay:
-        return List<int>.generate((daysUntilEvent / 2).ceil(), (index) => daysUntilEvent - (index * 2));
-      case ReminderPattern.weeklyUntilEvent:
-        return List<int>.generate((daysUntilEvent / 7).ceil(), (index) => daysUntilEvent - (index * 7));
-    }
   }
 }

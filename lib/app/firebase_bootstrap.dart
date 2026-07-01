@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../core/services/firebase_messaging_service.dart';
@@ -8,7 +9,14 @@ class FirebaseBootstrap {
 
   static Future<void> initialize() async {
     await NotificationService().initialize();
+
+    if (kIsWeb) {
+      return;
+    }
+
     await FirebaseMessagingService().initialize();
-    FirebaseMessaging.onBackgroundMessage(FirebaseMessagingService.backgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(
+      FirebaseMessagingService.backgroundHandler,
+    );
   }
 }

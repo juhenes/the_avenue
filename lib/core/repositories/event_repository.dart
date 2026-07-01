@@ -15,13 +15,11 @@ class DemoEventRepository implements EventRepository {
             ownerId: 'demo-user',
             fullName: 'Mia Carter',
             eventType: EventType.birthday,
-            birthDate: DateTime(1995, 9, 12),
             celebrationDate: DateTime.now().add(const Duration(days: 7)),
-            relationship: 'Friend',
+            recurrence: EventRecurrence.yearly,
             notes: 'Order the chocolate cake.',
             reminderEnabled: true,
-            reminderOffsets: const [7, 3, 1],
-            reminderPattern: ReminderPattern.dailyUntilEvent,
+            reminderOffsets: const [7, 3, 1, 0],
             privacy: EventPrivacy.private,
             createdBy: 'demo-user',
             createdAt: DateTime.now().subtract(const Duration(days: 30)),
@@ -32,13 +30,11 @@ class DemoEventRepository implements EventRepository {
             ownerId: 'demo-user',
             fullName: 'Campus Graduation',
             eventType: EventType.graduation,
-            birthDate: null,
             celebrationDate: DateTime.now().add(const Duration(days: 14)),
-            relationship: 'Family',
+            recurrence: EventRecurrence.never,
             notes: 'Bring a camera.',
             reminderEnabled: true,
-            reminderOffsets: const [14, 7, 3],
-            reminderPattern: ReminderPattern.everyOtherDay,
+            reminderOffsets: const [14, 7, 3, 1, 0],
             privacy: EventPrivacy.public,
             createdBy: 'demo-user',
             createdAt: DateTime.now().subtract(const Duration(days: 20)),
@@ -55,8 +51,17 @@ class DemoEventRepository implements EventRepository {
 
   @override
   Future<List<EventRecord>> fetchEvents(String userId) async {
-    return _events.where((event) => event.ownerId == userId || event.privacy == EventPrivacy.public).toList()
-      ..sort((left, right) => left.celebrationDate.compareTo(right.celebrationDate));
+    return _events
+        .where(
+          (event) =>
+              event.ownerId == userId ||
+              event.privacy == EventPrivacy.public,
+        )
+        .toList()
+      ..sort(
+        (left, right) =>
+            left.celebrationDate.compareTo(right.celebrationDate),
+      );
   }
 
   @override
@@ -66,7 +71,10 @@ class DemoEventRepository implements EventRepository {
 
   @override
   Future<void> saveEvent(EventRecord event) async {
-    final index = _events.indexWhere((existing) => existing.id == event.id);
+    final index = _events.indexWhere(
+      (existing) => existing.id == event.id,
+    );
+
     if (index == -1) {
       _events.add(event);
     } else {

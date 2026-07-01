@@ -1,8 +1,23 @@
-enum EventType { birthday, anniversary, graduation, wedding, custom }
+enum EventType {
+  birthday,
+  anniversary,
+  graduation,
+  wedding,
+  custom,
+}
 
-enum EventPrivacy { private, public }
+enum EventPrivacy {
+  private,
+  public,
+}
 
-enum ReminderPattern { once, dailyUntilEvent, everyOtherDay, weeklyUntilEvent }
+enum EventRecurrence {
+  never,
+  daily,
+  weekly,
+  monthly,
+  yearly,
+}
 
 class EventRecord {
   const EventRecord({
@@ -11,29 +26,28 @@ class EventRecord {
     required this.fullName,
     required this.eventType,
     required this.celebrationDate,
+    required this.recurrence,
     required this.privacy,
     required this.createdBy,
     required this.createdAt,
     required this.updatedAt,
-    this.birthDate,
-    this.relationship,
     this.notes,
     this.reminderEnabled = true,
-    this.reminderOffsets = const [7, 3, 1],
-    this.reminderPattern = ReminderPattern.once,
+    this.reminderOffsets = const [7, 3, 1, 0],
   });
 
   final String id;
   final String ownerId;
   final String fullName;
   final EventType eventType;
-  final DateTime? birthDate;
   final DateTime celebrationDate;
-  final String? relationship;
+  final EventRecurrence recurrence;
   final String? notes;
+
   final bool reminderEnabled;
+
   final List<int> reminderOffsets;
-  final ReminderPattern reminderPattern;
+
   final EventPrivacy privacy;
   final String createdBy;
   final DateTime createdAt;
@@ -44,13 +58,11 @@ class EventRecord {
     String? ownerId,
     String? fullName,
     EventType? eventType,
-    DateTime? birthDate,
     DateTime? celebrationDate,
-    String? relationship,
+    EventRecurrence? recurrence,
     String? notes,
     bool? reminderEnabled,
     List<int>? reminderOffsets,
-    ReminderPattern? reminderPattern,
     EventPrivacy? privacy,
     String? createdBy,
     DateTime? createdAt,
@@ -61,13 +73,11 @@ class EventRecord {
       ownerId: ownerId ?? this.ownerId,
       fullName: fullName ?? this.fullName,
       eventType: eventType ?? this.eventType,
-      birthDate: birthDate ?? this.birthDate,
       celebrationDate: celebrationDate ?? this.celebrationDate,
-      relationship: relationship ?? this.relationship,
+      recurrence: recurrence ?? this.recurrence,
       notes: notes ?? this.notes,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderOffsets: reminderOffsets ?? this.reminderOffsets,
-      reminderPattern: reminderPattern ?? this.reminderPattern,
       privacy: privacy ?? this.privacy,
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
@@ -81,13 +91,11 @@ class EventRecord {
       'ownerId': ownerId,
       'fullName': fullName,
       'eventType': eventType.name,
-      'birthDate': birthDate?.toIso8601String(),
       'celebrationDate': celebrationDate.toIso8601String(),
-      'relationship': relationship,
+      'recurrence': recurrence.name,
       'notes': notes,
       'reminderEnabled': reminderEnabled,
       'reminderOffsets': reminderOffsets,
-      'reminderPattern': reminderPattern.name,
       'privacy': privacy.name,
       'createdBy': createdBy,
       'createdAt': createdAt.toIso8601String(),
@@ -101,23 +109,23 @@ class EventRecord {
       ownerId: json['ownerId'] as String,
       fullName: json['fullName'] as String,
       eventType: EventType.values.firstWhere(
-        (eventType) => eventType.name == json['eventType'],
+        (e) => e.name == json['eventType'],
         orElse: () => EventType.custom,
       ),
-      birthDate: json['birthDate'] == null
-          ? (json['birthday'] == null ? null : DateTime.parse(json['birthday'] as String))
-          : DateTime.parse(json['birthDate'] as String),
-      celebrationDate: DateTime.parse(json['celebrationDate'] as String),
-      relationship: json['relationship'] as String?,
+      celebrationDate: DateTime.parse(
+        json['celebrationDate'] as String,
+      ),
+      recurrence: EventRecurrence.values.firstWhere(
+        (r) => r.name == json['recurrence'],
+        orElse: () => EventRecurrence.never,
+      ),
       notes: json['notes'] as String?,
       reminderEnabled: json['reminderEnabled'] as bool? ?? true,
-      reminderOffsets: (json['reminderOffsets'] as List<dynamic>? ?? const [7, 3, 1]).cast<int>(),
-      reminderPattern: ReminderPattern.values.firstWhere(
-        (pattern) => pattern.name == json['reminderPattern'],
-        orElse: () => ReminderPattern.once,
-      ),
+      reminderOffsets:
+          (json['reminderOffsets'] as List<dynamic>? ?? const [7, 3, 1, 0])
+              .cast<int>(),
       privacy: EventPrivacy.values.firstWhere(
-        (privacy) => privacy.name == json['privacy'],
+        (p) => p.name == json['privacy'],
         orElse: () => EventPrivacy.private,
       ),
       createdBy: json['createdBy'] as String? ?? json['ownerId'] as String,

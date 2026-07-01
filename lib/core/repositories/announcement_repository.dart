@@ -3,6 +3,7 @@ import '../models/announcement.dart';
 abstract class AnnouncementRepository {
   Stream<List<Announcement>> watchAnnouncements();
   Future<List<Announcement>> fetchAnnouncements();
+  Future<void> saveAnnouncement(Announcement announcement);
 }
 
 class DemoAnnouncementRepository implements AnnouncementRepository {
@@ -47,5 +48,16 @@ class DemoAnnouncementRepository implements AnnouncementRepository {
   @override
   Stream<List<Announcement>> watchAnnouncements() async* {
     yield await fetchAnnouncements();
+  }
+
+  @override
+  Future<void> saveAnnouncement(Announcement announcement) async {
+    final index = _announcements.indexWhere((existing) => existing.id == announcement.id);
+
+    if (index == -1) {
+      _announcements.add(announcement);
+    } else {
+      _announcements[index] = announcement;
+    }
   }
 }
