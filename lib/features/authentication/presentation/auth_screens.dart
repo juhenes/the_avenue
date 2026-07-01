@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/app_logo.dart';
 import '../../../app/providers.dart';
 import '../../../core/utils/auth_error_message.dart';
 
@@ -14,9 +15,10 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'demo@theavenue.app');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _busy = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -84,33 +86,78 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           children: [
             TextFormField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              enabled: !_busy,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               keyboardType: TextInputType.emailAddress,
               validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter your email' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
+              enabled: !_busy,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _signIn(),
+              decoration: InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              obscureText: _obscurePassword,
               validator: (value) => (value == null || value.isEmpty) ? 'Enter your password' : null,
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy ? null : _signIn,
-              child: Text(_busy ? 'Signing in...' : 'Login'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _busy
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Text('Login', style: TextStyle(fontSize: 16)),
             ),
+            const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.push('/auth/forgot-password'),
+              onPressed: _busy ? null : () => context.push('/auth/forgot-password'),
               child: const Text('Forgot password?'),
             ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: Divider(color: Theme.of(context).colorScheme.outlineVariant)),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text('OR', style: Theme.of(context).textTheme.bodySmall),
+                ),
+                Expanded(child: Divider(color: Theme.of(context).colorScheme.outlineVariant)),
+              ],
+            ),
+            const SizedBox(height: 16),
             OutlinedButton(
               onPressed: _busy ? null : _continueAsGuest,
-              child: const Text('Continue as Guest'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Continue as Guest', style: TextStyle(fontSize: 16)),
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: () => context.push('/auth/register'),
+              onPressed: _busy ? null : () => context.push('/auth/register'),
               child: const Text('Create an account'),
             ),
           ],
@@ -133,6 +180,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _emailController = TextEditingController(text: 'new@theavenue.app');
   final _passwordController = TextEditingController(text: 'password123');
   bool _busy = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -182,30 +230,64 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           children: [
             TextFormField(
               controller: _displayNameController,
-              decoration: const InputDecoration(labelText: 'Display name'),
+              enabled: !_busy,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Display name',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a display name' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              enabled: !_busy,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               keyboardType: TextInputType.emailAddress,
               validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter your email' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
+              enabled: !_busy,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _register(),
+              decoration: InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: IconButton(
+                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              obscureText: _obscurePassword,
               validator: (value) => (value == null || value.length < 6) ? 'Use at least 6 characters' : null,
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy ? null : _register,
-              child: Text(_busy ? 'Creating...' : 'Register'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _busy
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Text('Register', style: TextStyle(fontSize: 16)),
             ),
+            const SizedBox(height: 8),
             TextButton(
-              onPressed: () => context.push('/auth/login'),
+              onPressed: _busy ? null : () => context.push('/auth/login'),
               child: const Text('Back to login'),
             ),
           ],
@@ -272,14 +354,38 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           children: [
             TextFormField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              enabled: !_busy,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _sendReset(),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               keyboardType: TextInputType.emailAddress,
               validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter your email' : null,
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy ? null : _sendReset,
-              child: Text(_busy ? 'Sending...' : 'Send reset link'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _busy
+                  ? SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    )
+                  : const Text('Send reset link', style: TextStyle(fontSize: 16)),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: _busy ? null : () => context.pop(),
+              child: const Text('Back to login'),
             ),
           ],
         ),
@@ -300,6 +406,7 @@ class _AuthScaffold extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: colorScheme.surfaceContainerHighest,
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -307,25 +414,34 @@ class _AuthScaffold extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Card(
+                elevation: 4,
+                shadowColor: Colors.black12,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(32),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: colorScheme.primaryContainer,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Icon(Icons.cake_outlined, color: colorScheme.onPrimaryContainer),
-                      ),
-                      const SizedBox(height: 20),
-                      Text(title, style: Theme.of(context).textTheme.headlineMedium),
-                      const SizedBox(height: 8),
-                      Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
+                      const AppLogo(size: 88),
                       const SizedBox(height: 24),
+                      Text(
+                        title,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subtitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                       child,
                     ],
                   ),
