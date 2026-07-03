@@ -8,8 +8,7 @@ import '../features/authentication/presentation/auth_screens.dart';
 import '../features/events/presentation/event_screens.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/profile/presentation/profile_screen.dart';
-import '../features/settings/presentation/settings_screen.dart';
-import '../features/settings/presentation/admin_management_screen.dart';
+import '../features/profile/presentation/admin_management_screen.dart';
 import 'providers.dart';
 
 class GoRouterRefreshStream extends ChangeNotifier {
@@ -107,10 +106,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
-      ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: '/settings/admins',

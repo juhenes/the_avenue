@@ -33,10 +33,6 @@ class HomeScreen extends ConsumerWidget {
             onPressed: () => context.push('/profile'),
             icon: const Icon(Icons.person_outline),
           ),
-          IconButton(
-            onPressed: () => context.push('/settings'),
-            icon: const Icon(Icons.settings_outlined),
-          ),
         ],
       ),
       floatingActionButton: user.isGuest
