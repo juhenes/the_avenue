@@ -41,27 +41,28 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCQZH0N5UddwtOLBjnZPiGtl7bJIXM3UJY',
-    appId: '1:26321920147:web:f9ba8d7aebf26c43402d66',
-    messagingSenderId: '26321920147',
-    projectId: 'theavenue-reminder-hub',
-    authDomain: 'theavenue-reminder-hub.firebaseapp.com',
-    storageBucket: 'theavenue-reminder-hub.firebasestorage.app',
+    apiKey: 'AIzaSyBmsLfXiHJFJ3NAwz57tBisGqSgT0553pM',
+    appId: '1:25937434597:web:f22847ee39ef167c0b810c',
+    messagingSenderId: '25937434597',
+    projectId: 'the-avenue-village',
+    authDomain: 'the-avenue-village.firebaseapp.com',
+    storageBucket: 'the-avenue-village.firebasestorage.app',
+    measurementId: 'G-MKJZ7QCMQJ',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBGtEyV_lIPgEmWSMexG5EhGuUg9iTJO4w',
-    appId: '1:26321920147:android:a97936e2eceb211a402d66',
-    messagingSenderId: '26321920147',
-    projectId: 'theavenue-reminder-hub',
-    storageBucket: 'theavenue-reminder-hub.firebasestorage.app',
+    apiKey: 'AIzaSyBgFQWqnAoL250-LygQl2_hi6MPguGiRr8',
+    appId: '1:25937434597:android:7f9dbedd059e4e950b810c',
+    messagingSenderId: '25937434597',
+    projectId: 'the-avenue-village',
+    storageBucket: 'the-avenue-village.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB3kjiv2Ran8oUhiCJJPrOEhd7gLcbzyTo',
-    appId: '1:26321920147:ios:dca0151718e8ab9c402d66',
-    messagingSenderId: '26321920147',
-    projectId: 'theavenue-reminder-hub',
-    storageBucket: 'theavenue-reminder-hub.firebasestorage.app',
+    apiKey: 'AIzaSyAKgCUhg6CIHIw2xhjCq7Gq4iRURFcA5Yk',
+    appId: '1:25937434597:ios:bc7d84c1cfa8a6800b810c',
+    messagingSenderId: '25937434597',
+    projectId: 'the-avenue-village',
+    storageBucket: 'the-avenue-village.firebasestorage.app',
     iosBundleId: 'com.example.theAvenue',
   );
   static const FirebaseOptions macos = FirebaseOptions(

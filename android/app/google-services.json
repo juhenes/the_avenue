@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "26321920147",
-    "project_id": "theavenue-reminder-hub",
-    "storage_bucket": "theavenue-reminder-hub.firebasestorage.app"
+    "project_number": "25937434597",
+    "project_id": "the-avenue-village",
+    "storage_bucket": "the-avenue-village.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:26321920147:android:a97936e2eceb211a402d66",
+        "mobilesdk_app_id": "1:25937434597:android:7f9dbedd059e4e950b810c",
         "android_client_info": {
           "package_name": "com.example.the_avenue"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBGtEyV_lIPgEmWSMexG5EhGuUg9iTJO4w"
+          "current_key": "AIzaSyBgFQWqnAoL250-LygQl2_hi6MPguGiRr8"
         }
       ],
       "services": {
