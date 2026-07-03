@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:the_avenue/features/announcements/presentation/widgets/announcement_card.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/models/app_user.dart';
@@ -116,28 +117,11 @@ class HomeScreen extends ConsumerWidget {
                     ...announcements.map(
                       (announcement) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          margin: EdgeInsets.zero,
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              child: Icon(
-                                announcement.pinned
-                                    ? Icons.push_pin
-                                    : Icons.campaign,
-                              ),
-                            ),
-                            title: Text(announcement.title),
-                            subtitle: Text(
-                              announcement.description,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () =>
-                                context.push('/announcements/${announcement.id}'),
-                          ),
+                        child: AnnouncementCard(
+                          announcement: announcement,
+                          canManage: isAdmin,
                         ),
-                      ),
+                      )
                     ),
                     const SizedBox(height: 12),
                   ],

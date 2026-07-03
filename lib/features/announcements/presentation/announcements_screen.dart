@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:the_avenue/features/announcements/presentation/widgets/announcement_card.dart';
 
 import '../../../app/providers.dart';
 import '../../../core/models/announcement.dart';
@@ -27,14 +28,6 @@ class AnnouncementsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Announcements'),
-        actions: [
-          if (canManageAnnouncements)
-            IconButton(
-              onPressed: () => context.push('/announcements/new'),
-              icon: const Icon(Icons.add),
-              tooltip: 'Create announcement',
-            ),
-        ],
       ),
       floatingActionButton: canManageAnnouncements
           ? FloatingActionButton.extended(
@@ -59,55 +52,12 @@ class AnnouncementsScreen extends ConsumerWidget {
             separatorBuilder: (context, index) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final announcement = visible[index];
-              return Opacity(
-                opacity: announcement.archived ? 0.6 : 1.0,
-                child: Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Icon(announcement.pinned ? Icons.push_pin : Icons.campaign),
-                    ),
-                    title: Row(
-                      children: [
-                        Expanded(child: Text(announcement.title)),
-                        if (announcement.archived)
-                          Container(
-                            margin: const EdgeInsets.only(left: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Archived',
-                              style: Theme.of(context).textTheme.labelSmall,
-                            ),
-                          ),
-                      ],
-                    ),
-                    subtitle: Text(DateFormat.yMMMMd().format(announcement.createdAt)),
-                    trailing: canManageAnnouncements
-                        ? PopupMenuButton<String>(
-                            onSelected: (value) => _handleMenuAction(
-                              context,
-                              ref,
-                              value,
-                              announcement,
-                            ),
-                            itemBuilder: (context) => [
-                              const PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                value: announcement.archived ? 'unarchive' : 'archive',
-                                child: Text(announcement.archived ? 'Unarchive' : 'Archive'),
-                              ),
-                              const PopupMenuItem(
-                                value: 'delete',
-                                child: Text('Delete', style: TextStyle(color: Colors.red)),
-                              ),
-                            ],
-                          )
-                        : const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/announcements/${announcement.id}'),
-                  ),
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: AnnouncementCard(
+                  announcement: announcement,
+                  canManage: canManageAnnouncements,
                 ),
               );
             },
