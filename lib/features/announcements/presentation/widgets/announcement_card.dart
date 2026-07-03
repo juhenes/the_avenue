@@ -21,59 +21,96 @@ class AnnouncementCard extends ConsumerWidget {
     return Opacity(
       opacity: announcement.archived ? 0.6 : 1,
       child: Card(
-        child: ListTile(
-          leading: CircleAvatar(
-            child: Icon(
-              announcement.pinned
-                  ? Icons.push_pin
-                  : Icons.campaign,
+        child: InkWell(
+          onTap: () {
+            context.push('/announcements/${announcement.id}');
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
             ),
-          ),
-
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(announcement.title),
-              ),
-
-              if (announcement.archived)
-                Container(
-                  margin: const EdgeInsets.only(left: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest,
-                  ),
-                  child: Text(
-                    'Archived',
-                    style: Theme.of(context).textTheme.labelSmall,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  child: Icon(
+                    announcement.pinned
+                        ? Icons.push_pin
+                        : Icons.campaign,
                   ),
                 ),
-            ],
-          ),
 
-          subtitle: Text(
-            DateFormat.yMMMMd().format(
-              announcement.createdAt,
+                const SizedBox(width: 16),
+
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              announcement.title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium,
+                              maxLines: 1,
+                              overflow:
+                                  TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              DateFormat.yMMMMd().format(
+                                announcement.createdAt,
+                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      if (announcement.archived) ...[
+                        const SizedBox(width: 12),
+                        Container(
+                          padding:
+                              const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(12),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                          ),
+                          child: Text(
+                            'Archived',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+                const SizedBox(width: 8),
+
+                canManage
+                    ? _AnnouncementMenuButton(
+                        announcement: announcement,
+                      )
+                    : const Icon(Icons.chevron_right),
+              ],
             ),
           ),
-
-          trailing: canManage
-              ? _AnnouncementMenuButton(
-                  announcement: announcement,
-                )
-              : const Icon(Icons.chevron_right),
-
-          onTap: () {
-            context.push(
-              '/announcements/${announcement.id}',
-            );
-          },
         ),
       ),
     );
@@ -123,7 +160,8 @@ class _AnnouncementMenuButton extends ConsumerWidget {
             break;
 
           case 'delete':
-            final confirmed = await showDialog<bool>(
+            final confirmed =
+                await showDialog<bool>(
               context: context,
               builder: (_) => AlertDialog(
                 title: const Text(
@@ -135,13 +173,20 @@ class _AnnouncementMenuButton extends ConsumerWidget {
                 actions: [
                   TextButton(
                     onPressed: () =>
-                        Navigator.pop(context, false),
+                        Navigator.pop(
+                      context,
+                      false,
+                    ),
                     child: const Text('Cancel'),
                   ),
                   FilledButton(
                     onPressed: () =>
-                        Navigator.pop(context, true),
-                    style: FilledButton.styleFrom(
+                        Navigator.pop(
+                      context,
+                      true,
+                    ),
+                    style:
+                        FilledButton.styleFrom(
                       backgroundColor: Colors.red,
                     ),
                     child: const Text('Delete'),
@@ -152,7 +197,9 @@ class _AnnouncementMenuButton extends ConsumerWidget {
 
             if (confirmed == true) {
               await ref
-                  .read(announcementRepositoryProvider)
+                  .read(
+                    announcementRepositoryProvider,
+                  )
                   .deleteAnnouncement(
                     announcement.id,
                   );
