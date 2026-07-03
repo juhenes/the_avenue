@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import 'package:the_avenue/features/announcements/presentation/widgets/announcement_card.dart';
 
 import '../../../app/providers.dart';
@@ -67,55 +66,6 @@ class AnnouncementsScreen extends ConsumerWidget {
         error: (error, stackTrace) => Center(child: Text('Unable to load announcements: $error')),
       ),
     );
-  }
-
-  Future<void> _handleMenuAction(
-    BuildContext context,
-    WidgetRef ref,
-    String action,
-    Announcement announcement,
-  ) async {
-    switch (action) {
-      case 'edit':
-        context.push('/announcements/${announcement.id}/edit');
-        return;
-      case 'archive':
-        await ref.read(announcementRepositoryProvider).saveAnnouncement(
-              announcement.copyWith(archived: true),
-            );
-        ref.invalidate(announcementsProvider);
-        return;
-      case 'unarchive':
-        await ref.read(announcementRepositoryProvider).saveAnnouncement(
-              announcement.copyWith(archived: false),
-            );
-        ref.invalidate(announcementsProvider);
-        return;
-      case 'delete':
-        final confirmed = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Delete announcement?'),
-            content: Text('This will permanently delete "${announcement.title}". This cannot be undone.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Delete'),
-              ),
-            ],
-          ),
-        );
-        if (confirmed == true) {
-          await ref.read(announcementRepositoryProvider).deleteAnnouncement(announcement.id);
-          ref.invalidate(announcementsProvider);
-        }
-        return;
-    }
   }
 }
 

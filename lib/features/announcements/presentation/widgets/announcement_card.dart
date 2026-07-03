@@ -48,30 +48,24 @@ class AnnouncementCard extends ConsumerWidget {
                     children: [
                       Expanded(
                         child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              announcement.title,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium,
-                              maxLines: 1,
-                              overflow:
-                                  TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              DateFormat.yMMMMd().format(
-                                announcement.createdAt,
-                              ),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall,
-                            ),
-                          ],
-                        ),
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            announcement.title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            announcement.description,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                       ),
 
                       if (announcement.archived) ...[
