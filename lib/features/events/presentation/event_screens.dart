@@ -566,13 +566,6 @@ class _EventFormBody extends StatelessWidget {
                   }
                 },
               ),
-              const SizedBox(height: 8),
-              Text(
-                reminderDays == 0
-                    ? 'No reminder will be sent for this event.'
-                    : 'Reminders will be sent ${List<int>.generate(reminderDays, (index) => reminderDays - index).join(', ')} day${reminderDays == 1 ? '' : 's'} before the event.',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: saving ? null : onSave,

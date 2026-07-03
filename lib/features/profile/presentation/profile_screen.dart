@@ -52,20 +52,6 @@ class ProfileScreen extends ConsumerWidget {
               ),
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          Card(
-            child: SwitchListTile.adaptive(
-              title: const Text('Demo notifications'),
-              subtitle: const Text(
-                'NotificationService is wired for local reminders.',
-              ),
-              value: true,
-              onChanged: (_) {},
-            ),
-          ),
-
           const SizedBox(height: 12),
 
           Card(
