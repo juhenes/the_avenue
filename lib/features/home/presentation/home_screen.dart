@@ -27,7 +27,7 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(user.isGuest ? 'The Avenue' : 'Hello, ${user.displayName}'),
+        title: Text('The Avenue'),
         actions: [
           IconButton(
             onPressed: () => context.push('/profile'),
