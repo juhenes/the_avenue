@@ -1,9 +1,10 @@
 import '../models/announcement.dart';
 
 abstract class AnnouncementRepository {
-  Stream<List<Announcement>> watchAnnouncements();
-  Future<List<Announcement>> fetchAnnouncements();
+  Future<List<Announcement>> fetchAnnouncements({required bool includeArchived});
+  Stream<List<Announcement>> watchAnnouncements({required bool includeArchived});
   Future<void> saveAnnouncement(Announcement announcement);
+  Future<void> deleteAnnouncement(String id);
 }
 
 class DemoAnnouncementRepository implements AnnouncementRepository {
@@ -31,7 +32,7 @@ class DemoAnnouncementRepository implements AnnouncementRepository {
   final List<Announcement> _announcements;
 
   @override
-  Future<List<Announcement>> fetchAnnouncements() async {
+  Future<List<Announcement>> fetchAnnouncements({required bool includeArchived}) async {
     return [..._announcements]
       ..sort((left, right) {
         final priorityComparison = right.priority.compareTo(left.priority);
@@ -46,8 +47,8 @@ class DemoAnnouncementRepository implements AnnouncementRepository {
   }
 
   @override
-  Stream<List<Announcement>> watchAnnouncements() async* {
-    yield await fetchAnnouncements();
+  Stream<List<Announcement>> watchAnnouncements({required bool includeArchived}) async* {
+    yield await fetchAnnouncements(includeArchived: includeArchived);
   }
 
   @override
@@ -59,5 +60,10 @@ class DemoAnnouncementRepository implements AnnouncementRepository {
     } else {
       _announcements[index] = announcement;
     }
+  }
+
+  @override
+  Future<void> deleteAnnouncement(String id) async {
+    _announcements.removeWhere((announcement) => announcement.id == id);
   }
 }

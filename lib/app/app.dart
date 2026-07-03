@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../firebase_options.dart';
 import 'providers.dart';
 import 'router.dart';
 import 'theme.dart';

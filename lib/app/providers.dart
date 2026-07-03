@@ -19,7 +19,7 @@ import '../core/services/notification_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   if (Firebase.apps.isNotEmpty) {
-    return FirebaseAuthRepository(eventRepository: ref.watch(eventRepositoryProvider));
+    return FirebaseAuthRepository();
   }
 
   throw StateError('Firebase has not been initialized.');
@@ -74,8 +74,32 @@ final eventsProvider = StreamProvider<List<EventRecord>>((ref) {
   return ref.watch(eventRepositoryProvider).watchEvents(user.id);
 });
 
-final announcementsProvider = StreamProvider<List<Announcement>>((ref) {
-  return ref.watch(announcementRepositoryProvider).watchAnnouncements();
+final announcementsProvider = StreamProvider.autoDispose<List<Announcement>>((ref) {
+  final user = ref.watch(authStateProvider).value ?? AppUser.guest();
+  final isAdminAsync = ref.watch(currentUserIsAdminProvider);
+
+  final normalizedEmail = user.email.trim().toLowerCase();
+  final isSuperAdmin = !user.isGuest && normalizedEmail == 'superadmin@theavenue.org';
+  final isAdmin = isSuperAdmin || isAdminAsync.maybeWhen(data: (v) => v, orElse: () => false);
+
+  return ref
+      .watch(announcementRepositoryProvider)
+      .watchAnnouncements(includeArchived: isAdmin);
+});
+
+final announcementByIdProvider =
+    StreamProvider.autoDispose.family<Announcement?, String>((ref, announcementId) {
+  return ref
+      .watch(announcementRepositoryProvider)
+      .watchAnnouncements(includeArchived: true)
+      .map((announcements) {
+    for (final announcement in announcements) {
+      if (announcement.id == announcementId) {
+        return announcement;
+      }
+    }
+    return null;
+  });
 });
 
 final adminsProvider = StreamProvider<List<AdminRecord>>((ref) {

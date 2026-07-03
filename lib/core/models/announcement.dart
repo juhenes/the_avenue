@@ -53,6 +53,7 @@ class Announcement {
     this.imageUrl,
     this.expirationDate,
     this.pinned = false,
+    this.archived = false,
     this.attachments = const [],
     this.links = const [],
   });
@@ -66,6 +67,7 @@ class Announcement {
   final int priority;
   final String author;
   final bool pinned;
+  final bool archived;
   final List<AnnouncementAttachment> attachments;
   final List<AnnouncementLink> links;
 
@@ -79,6 +81,7 @@ class Announcement {
     int? priority,
     String? author,
     bool? pinned,
+    bool? archived,
     List<AnnouncementAttachment>? attachments,
     List<AnnouncementLink>? links,
   }) {
@@ -92,6 +95,7 @@ class Announcement {
       priority: priority ?? this.priority,
       author: author ?? this.author,
       pinned: pinned ?? this.pinned,
+      archived: archived ?? this.archived,
       attachments: attachments ?? this.attachments,
       links: links ?? this.links,
     );
@@ -108,6 +112,7 @@ class Announcement {
       'priority': priority,
       'author': author,
       'pinned': pinned,
+      'archived': archived,
       'attachments': attachments.map((attachment) => attachment.toJson()).toList(),
       'links': links.map((link) => link.toJson()).toList(),
     };
@@ -126,6 +131,7 @@ class Announcement {
       priority: json['priority'] as int? ?? 0,
       author: json['author'] as String? ?? 'System',
       pinned: json['pinned'] as bool? ?? false,
+      archived: json['archived'] as bool? ?? false,
       attachments: (json['attachments'] as List<dynamic>? ?? const [])
           .cast<Map<String, dynamic>>()
           .map(AnnouncementAttachment.fromJson)

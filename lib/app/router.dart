@@ -99,6 +99,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => AnnouncementDetailScreen(announcementId: state.pathParameters['announcementId']!),
       ),
       GoRoute(
+        path: '/announcements/:announcementId/edit',
+        builder: (context, state) => AnnouncementFormScreen(
+          announcementId: state.pathParameters['announcementId'],
+        ),
+      ),
+      GoRoute(
         path: '/profile',
         builder: (context, state) => const ProfileScreen(),
       ),
