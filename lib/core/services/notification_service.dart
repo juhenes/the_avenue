@@ -63,7 +63,7 @@ class NotificationService {
 
     await _plugin.zonedSchedule(
       NotificationIds.reminder(event.id, reminderOffsetDays),
-      '${event.fullName} is coming up',
+      '${event.eventName} is coming up',
       'Reminder $reminderOffsetDays day(s) before the ${event.eventType.name}.',
       _toZonedDateTime(notificationDateTime),
       notificationDetails,

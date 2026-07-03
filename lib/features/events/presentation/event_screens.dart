@@ -8,7 +8,7 @@ import '../../../app/providers.dart';
 import '../../../core/models/app_user.dart';
 import '../../../core/models/event_record.dart';
 
-enum _EventSort { celebrationDate, fullName }
+enum _EventSort { celebrationDate, eventName }
 
 class EventListScreen extends ConsumerWidget {
   const EventListScreen({super.key});
@@ -35,13 +35,13 @@ class EventListScreen extends ConsumerWidget {
               return privacyFilter == null || event.privacy == privacyFilter;
             }
 
-            final matchesQuery = event.fullName.toLowerCase().contains(query.toLowerCase());
+            final matchesQuery = event.eventName.toLowerCase().contains(query.toLowerCase());
             final matchesPrivacy = privacyFilter == null || event.privacy == privacyFilter;
             return matchesQuery && matchesPrivacy;
           }).toList()
             ..sort((left, right) {
-              if (sortBy == _EventSort.fullName) {
-                return left.fullName.toLowerCase().compareTo(right.fullName.toLowerCase());
+              if (sortBy == _EventSort.eventName) {
+                return left.eventName.toLowerCase().compareTo(right.eventName.toLowerCase());
               }
               return left.celebrationDate.compareTo(right.celebrationDate);
             });
@@ -81,7 +81,7 @@ class EventListScreen extends ConsumerWidget {
                 decoration: const InputDecoration(labelText: 'Sort by'),
                 items: const [
                   DropdownMenuItem(value: _EventSort.celebrationDate, child: Text('Celebration date')),
-                  DropdownMenuItem(value: _EventSort.fullName, child: Text('Full name')),
+                  DropdownMenuItem(value: _EventSort.eventName, child: Text('Event name')),
                 ],
                 onChanged: (value) => ref.read(_eventSortProvider.notifier).state = value ?? _EventSort.celebrationDate,
               ),
@@ -155,7 +155,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     }
 
     _loadedExistingEvent = true;
-    _fullNameController.text = event.fullName;
+    _fullNameController.text = event.eventName;
     _notesController.text = event.notes ?? '';
     _celebrationDate = event.celebrationDate;
     _eventType = event.eventType;
@@ -229,7 +229,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
         orElse: () => EventRecord(
           id: widget.eventId!,
           ownerId: user.id,
-          fullName: '',
+          eventName: '',
           eventType: EventType.birthday,
           celebrationDate: DateTime.now(),
           recurrence: EventRecurrence.yearly,
@@ -252,7 +252,7 @@ class _EventFormScreenState extends ConsumerState<EventFormScreen> {
     final event = EventRecord(
       id: widget.eventId ?? DateTime.now().millisecondsSinceEpoch.toString(),
       ownerId: existingEvent?.ownerId ?? user.id,
-      fullName: _fullNameController.text.trim(),
+      eventName: _fullNameController.text.trim(),
       eventType: _eventType,
       celebrationDate: _celebrationDate,
       recurrence: _recurrence,
@@ -478,8 +478,8 @@ class _EventFormBody extends StatelessWidget {
             children: [
               TextFormField(
                 controller: fullNameController,
-                decoration: const InputDecoration(labelText: 'Full name'),
-                validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
+                decoration: const InputDecoration(labelText: 'Event name'),
+                validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter an event name' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<EventType>(
@@ -604,7 +604,7 @@ class EventDetailScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(event.fullName, style: Theme.of(context).textTheme.headlineMedium),
+                          Text(event.eventName, style: Theme.of(context).textTheme.headlineMedium),
                           const SizedBox(height: 8),
                           Text(event.eventType.name.toUpperCase()),
                           const SizedBox(height: 16),
@@ -732,8 +732,8 @@ class _EventCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        leading: CircleAvatar(child: Text(event.fullName.characters.first.toUpperCase())),
-        title: Text(event.fullName),
+        leading: CircleAvatar(child: Text(event.eventName.characters.first.toUpperCase())),
+        title: Text(event.eventName),
         subtitle: Text('${_eventTypeLabel(event.eventType)} • ${DateFormat.yMMMMd().format(event.celebrationDate)}'),
         trailing: Wrap(
           spacing: 8,

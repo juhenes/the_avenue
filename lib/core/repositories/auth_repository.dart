@@ -1,21 +1,29 @@
 import 'dart:async';
 
 import '../models/app_user.dart';
+import '../models/event_record.dart';
+import 'event_repository.dart';
 
 abstract class AuthRepository {
   Stream<AppUser?> watchAuthState();
   AppUser? get currentUser;
   Future<void> continueAsGuest();
   Future<void> signIn({required String email, required String password});
-  Future<void> register({required String email, required String password, required String displayName});
+  Future<void> register({
+    required String email,
+    required String password,
+    required String displayName,
+    required DateTime birthday,
+  });
   Future<void> sendPasswordReset({required String email});
   Future<void> signOut();
 }
 
 class DemoAuthRepository implements AuthRepository {
-  DemoAuthRepository();
+  DemoAuthRepository({EventRepository? eventRepository}) : _eventRepository = eventRepository;
 
   final StreamController<AppUser?> _controller = StreamController<AppUser?>.broadcast();
+  final EventRepository? _eventRepository;
   AppUser? _currentUser = AppUser.guest();
 
   @override
@@ -38,8 +46,31 @@ class DemoAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> register({required String email, required String password, required String displayName}) async {
+  Future<void> register({
+    required String email,
+    required String password,
+    required String displayName,
+    required DateTime birthday,
+  }) async {
     _emit(AppUser(id: 'demo-user', displayName: displayName, email: email, isGuest: false));
+
+    final eventRepository = _eventRepository;
+    if (eventRepository != null) {
+      await eventRepository.saveEvent(
+        EventRecord(
+          id: 'demo-user-birthday',
+          ownerId: 'demo-user',
+          eventName: "$displayName's Birthday",
+          eventType: EventType.birthday,
+          celebrationDate: birthday,
+          recurrence: EventRecurrence.yearly,
+          privacy: EventPrivacy.public,
+          createdBy: 'demo-user',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
   }
 
   @override

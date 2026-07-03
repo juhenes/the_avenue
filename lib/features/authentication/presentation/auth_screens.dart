@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../app/app_logo.dart';
 import '../../../app/providers.dart';
@@ -25,6 +26,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(() => setState(() {}));
   }
 
   Future<void> _signIn() async {
@@ -77,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return _AuthScaffold(
-      title: 'Welcome back',
+      title: 'The Avenue',
       subtitle: 'Sign in to sync your events, reminders, and private announcements across devices.',
       child: Form(
         key: _formKey,
@@ -104,10 +111,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               decoration: InputDecoration(
                 labelText: 'Password',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                ),
+                suffixIcon: _passwordController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        size: 20, // Smaller eye icon
+                      ),
+                      splashRadius: 20,
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
               ),
               obscureText: _obscurePassword,
               validator: (value) => (value == null || value.isEmpty) ? 'Enter your password' : null,
@@ -176,18 +192,47 @@ class RegisterScreen extends ConsumerStatefulWidget {
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _displayNameController = TextEditingController(text: 'The Avenue User');
-  final _emailController = TextEditingController(text: 'new@theavenue.app');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _displayNameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _birthdayController = TextEditingController();
   bool _busy = false;
   bool _obscurePassword = true;
+  DateTime? _birthday;
 
   @override
   void dispose() {
     _displayNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _birthdayController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(() => setState(() {}));
+  }
+
+  Future<void> _pickBirthday() async {
+    final now = DateTime.now();
+    final initialDate = _birthday ?? DateTime(now.year - 18, now.month, now.day);
+    final picked = await showDatePicker(
+      context: context,
+      firstDate: DateTime(1900),
+      lastDate: now,
+      initialDate: initialDate.isAfter(now) ? now : initialDate,
+    );
+
+    if (picked == null) {
+      return;
+    }
+
+    setState(() {
+      _birthday = picked;
+      _birthdayController.text = DateFormat.yMMMd().format(picked);
+    });
   }
 
   Future<void> _register() async {
@@ -201,6 +246,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             email: _emailController.text.trim(),
             password: _passwordController.text,
             displayName: _displayNameController.text.trim(),
+            birthday: _birthday!,
           );
       if (mounted) {
         context.go('/home');
@@ -240,6 +286,23 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
+              controller: _birthdayController,
+              readOnly: true,
+              enabled: !_busy,
+              onTap: _busy ? null : _pickBirthday,
+              decoration: InputDecoration(
+                labelText: 'Birthday',
+                hintText: 'Select your birthday',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: IconButton(
+                  onPressed: _busy ? null : _pickBirthday,
+                  icon: const Icon(Icons.calendar_month),
+                ),
+              ),
+              validator: (_) => _birthday == null ? 'Select your birthday' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
               controller: _emailController,
               enabled: !_busy,
               textInputAction: TextInputAction.next,
@@ -259,10 +322,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               decoration: InputDecoration(
                 labelText: 'Password',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                ),
+                suffixIcon: _passwordController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        size: 20, // Smaller eye icon
+                      ),
+                      splashRadius: 20,
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
+                    ),
               ),
               obscureText: _obscurePassword,
               validator: (value) => (value == null || value.length < 6) ? 'Use at least 6 characters' : null,

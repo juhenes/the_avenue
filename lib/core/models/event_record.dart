@@ -23,7 +23,7 @@ class EventRecord {
   const EventRecord({
     required this.id,
     required this.ownerId,
-    required this.fullName,
+    required this.eventName,
     required this.eventType,
     required this.celebrationDate,
     required this.recurrence,
@@ -38,7 +38,7 @@ class EventRecord {
 
   final String id;
   final String ownerId;
-  final String fullName;
+  final String eventName;
   final EventType eventType;
   final DateTime celebrationDate;
   final EventRecurrence recurrence;
@@ -56,7 +56,7 @@ class EventRecord {
   EventRecord copyWith({
     String? id,
     String? ownerId,
-    String? fullName,
+    String? eventName,
     EventType? eventType,
     DateTime? celebrationDate,
     EventRecurrence? recurrence,
@@ -71,7 +71,7 @@ class EventRecord {
     return EventRecord(
       id: id ?? this.id,
       ownerId: ownerId ?? this.ownerId,
-      fullName: fullName ?? this.fullName,
+      eventName: eventName ?? this.eventName,
       eventType: eventType ?? this.eventType,
       celebrationDate: celebrationDate ?? this.celebrationDate,
       recurrence: recurrence ?? this.recurrence,
@@ -89,7 +89,7 @@ class EventRecord {
     return {
       'id': id,
       'ownerId': ownerId,
-      'fullName': fullName,
+      'eventName': eventName,
       'eventType': eventType.name,
       'celebrationDate': celebrationDate.toIso8601String(),
       'recurrence': recurrence.name,
@@ -107,7 +107,7 @@ class EventRecord {
     return EventRecord(
       id: json['id'] as String,
       ownerId: json['ownerId'] as String,
-      fullName: json['fullName'] as String,
+      eventName: json['eventName'] as String? ?? json['fullName'] as String,
       eventType: EventType.values.firstWhere(
         (e) => e.name == json['eventType'],
         orElse: () => EventType.custom,

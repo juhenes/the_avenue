@@ -13,7 +13,7 @@ class DemoEventRepository implements EventRepository {
           EventRecord(
             id: '1',
             ownerId: 'demo-user',
-            fullName: 'Mia Carter',
+            eventName: 'Mia Carter',
             eventType: EventType.birthday,
             celebrationDate: DateTime.now().add(const Duration(days: 7)),
             recurrence: EventRecurrence.yearly,
@@ -28,7 +28,7 @@ class DemoEventRepository implements EventRepository {
           EventRecord(
             id: '2',
             ownerId: 'demo-user',
-            fullName: 'Campus Graduation',
+            eventName: 'Campus Graduation',
             eventType: EventType.graduation,
             celebrationDate: DateTime.now().add(const Duration(days: 14)),
             recurrence: EventRecurrence.never,

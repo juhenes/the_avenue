@@ -16,6 +16,10 @@ class HomeScreen extends ConsumerWidget {
     final eventsAsync = ref.watch(eventsProvider);
     final announcementsAsync = ref.watch(announcementsProvider);
     final searchQuery = ref.watch(searchQueryProvider);
+    final isAdmin = ref.watch(currentUserIsAdminProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => false,
+        );
 
     return Scaffold(
       appBar: AppBar(
@@ -35,18 +39,7 @@ class HomeScreen extends ConsumerWidget {
           ? null
           : FloatingActionButton(
               onPressed: () async {
-                final currentUser = ref.read(authStateProvider).value ?? AppUser.guest();
-                final normalizedEmail = currentUser.email.trim().toLowerCase();
-
-                final admins = await ref.read(adminsProvider.future);
-                if (!context.mounted) {
-                  return;
-                }
-
-                final canCreateAnnouncement = normalizedEmail == 'superadmin@theavenue.org' ||
-                    admins.any((admin) => admin.email == normalizedEmail);
-
-                if (!canCreateAnnouncement) {
+                if (!isAdmin) {
                   context.push('/events/new');
                   return;
                 }
@@ -152,7 +145,7 @@ class HomeScreen extends ConsumerWidget {
                     if (searchQuery.isEmpty) {
                       return true;
                     }
-                    return event.fullName
+                    return event.eventName
                         .toLowerCase()
                         .contains(searchQuery.toLowerCase());
                   }).toList();
@@ -263,8 +256,8 @@ class _UpcomingEventList extends StatelessWidget {
 
               return Card(
               child: ListTile(
-                leading: CircleAvatar(child: Text(event.fullName.characters.first.toUpperCase())),
-                title: Text(event.fullName),
+                leading: CircleAvatar(child: Text(event.eventName.characters.first.toUpperCase())),
+                title: Text(event.eventName),
                 subtitle: Text(DateFormat.yMMMMd().format(nextOccurrence)),
                 trailing: _PrivacyChip(privacy: event.privacy),
                 onTap: () => context.push('/events/${event.id}'),

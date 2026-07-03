@@ -3,12 +3,17 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/app_user.dart';
+import '../models/event_record.dart';
+import 'event_repository.dart';
 import 'auth_repository.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
-  FirebaseAuthRepository({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
+  FirebaseAuthRepository({FirebaseAuth? auth, EventRepository? eventRepository})
+      : _auth = auth ?? FirebaseAuth.instance,
+        _eventRepository = eventRepository;
 
   final FirebaseAuth _auth;
+  final EventRepository? _eventRepository;
 
   @override
   AppUser? get currentUser => _toAppUser(_auth.currentUser);
@@ -19,10 +24,34 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> register({required String email, required String password, required String displayName}) async {
+  Future<void> register({
+    required String email,
+    required String password,
+    required String displayName,
+    required DateTime birthday,
+  }) async {
     final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
     await credential.user?.updateDisplayName(displayName);
     await credential.user?.reload();
+
+    final user = credential.user;
+    final eventRepository = _eventRepository;
+    if (user != null && eventRepository != null) {
+      await eventRepository.saveEvent(
+        EventRecord(
+          id: '${user.uid}-birthday',
+          ownerId: user.uid,
+          eventName: "$displayName's Birthday",
+          eventType: EventType.birthday,
+          celebrationDate: birthday,
+          recurrence: EventRecurrence.yearly,
+          privacy: EventPrivacy.public,
+          createdBy: user.uid,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
   }
 
   @override

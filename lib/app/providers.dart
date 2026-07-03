@@ -19,7 +19,7 @@ import '../core/services/notification_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   if (Firebase.apps.isNotEmpty) {
-    return FirebaseAuthRepository();
+    return FirebaseAuthRepository(eventRepository: ref.watch(eventRepositoryProvider));
   }
 
   throw StateError('Firebase has not been initialized.');
