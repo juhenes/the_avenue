@@ -256,3 +256,99 @@ class _AnnouncementFormScreenState extends ConsumerState<AnnouncementFormScreen>
     );
   }
 }
+
+class AnnouncementDetailScreen extends ConsumerWidget {
+  const AnnouncementDetailScreen({super.key, required this.announcementId});
+
+  final String announcementId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final announcementsAsync = ref.watch(announcementsProvider);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Announcement')),
+      body: announcementsAsync.when(
+        data: (announcements) {
+          final announcement = announcements.firstWhere(
+            (candidate) => candidate.id == announcementId,
+            orElse: () => announcements.first,
+          );
+
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Text(
+                    announcement.title,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'By ${announcement.author}',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    announcement.description,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  if (announcement.attachments.isNotEmpty)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Attachments',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            ...announcement.attachments.map(
+                              (attachment) => ListTile(
+                                title: Text(attachment.label),
+                                subtitle: Text(attachment.url),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (announcement.links.isNotEmpty)
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Links',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            ...announcement.links.map(
+                              (link) => ListTile(
+                                title: Text(link.title),
+                                subtitle: Text(link.url),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) =>
+            Center(child: Text('Unable to load announcement: $error')),
+      ),
+    );
+  }
+}
